@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nova · CSS Peeps avatar demo</title>
+  <!-- La API data-css-peeps es más estable en overlays Chromium/OBS. -->
+  <link rel="stylesheet" href="https://unpkg.com/css-peeps@1/css-peeps.compat.css">
+  <script type="importmap">
+    { "imports": { "@nekuda/webmcp-sdk": "./webmcp/vendor/nekuda-webmcp-sdk-0.5.0/index.js" } }
+  </script>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 15% 15%, #263b79, #0d1020 54%, #070812); color: #eff2ff; }
+    main { display: grid; grid-template-columns: minmax(300px, 440px) minmax(260px, 380px); gap: 28px; align-items: center; padding: 30px; }
+    .stage { min-height: 560px; display: grid; place-items: end center; border: 1px solid #6e7bcf55; border-radius: 28px; background: linear-gradient(160deg, #111936cc, #24154dcc); overflow: hidden; position: relative; box-shadow: 0 28px 60px #0008; }
+    .stage::after { content: "CSS Peeps · prototipo local"; position: absolute; bottom: 16px; color: #c8d5ff99; font-size: 12px; letter-spacing: .08em; }
+    .peep { width: 330px; height: 446px; margin-bottom: 34px; --peep-head: bangs1; --peep-face: talking; --peep-body: explaining; --peep-hair-color: #ff77b7; --peep-skin-color: #f2b28f; --peep-clothes-color: #f4efff; --peep-accessory-color: #ffd75a; --peep-object-color: #61dafb; filter: drop-shadow(0 16px 18px #0008); transform-origin: bottom center; }
+    .peep.idle { animation: breathe 3.2s ease-in-out infinite alternate; }
+    .peep.speaking { animation: talking .17s ease-in-out infinite alternate; }
+    .peep.reacting { animation: reaction .55s cubic-bezier(.2, 1.6, .4, 1) 4; }
+    @keyframes breathe { to { transform: translateY(-8px) rotate(-1deg); } }
+    @keyframes talking { to { transform: translateY(-13px) scale(1.025) rotate(.7deg); } }
+    @keyframes reaction { 50% { transform: translateY(-22px) rotate(-7deg) scale(1.08); } }
+    section { background: #10152be8; border: 1px solid #8397e044; border-radius: 22px; padding: 22px; box-shadow: 0 16px 45px #0005; }
+    h1 { font-size: 22px; margin: 0 0 8px; } p { color: #bdc7eb; line-height: 1.5; }
+    textarea { width: 100%; min-height: 240px; padding: 12px; box-sizing: border-box; border-radius: 12px; background: #080c1d; border: 1px solid #5368af; color: #dbe5ff; font: 12px ui-monospace, monospace; }
+    .controls { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+    button { border: 0; border-radius: 10px; padding: 10px 13px; color: #fff; background: #526bd6; cursor: pointer; font-weight: 700; } button:hover { background: #6d85f1; }
+    .status { margin-top: 14px; color: #87f0c3; font-size: 13px; }
+    @media (max-width: 780px) { main { grid-template-columns: 1fr; padding: 16px; } .stage { min-height: 480px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="stage"><div id="peep" class="css-peeps peep idle" aria-label="Avatar de Nova"></div></div>
+    <section>
+      <h1>Nova avatar · estado controlado</h1>
+      <p>El JSON persistente define la identidad. El estado temporal cambia al hablar o reaccionar sin reescribir esa identidad.</p>
+      <textarea id="config" spellcheck="false"></textarea>
+      <div class="controls">
+        <button id="apply">Aplicar JSON</button>
+        <button id="talk">Hablar 5 s</button>
+        <button id="react">Reaccionar</button>
+        <button id="idle">Reposo</button>
+      </div>
+      <div class="status" id="status">Estado: idle</div>
+    </section>
+  </main>
+  <script>
+    const avatar = {
+      identity: {
+        head: "bangs1", face: "talking", body: "explaining",
+        colors: { hair: "#ff77b7", skin: "#f2b28f", clothes: "#f4efff", accessory: "#ffd75a" }
+      },
+      state: { expression: "idle", speaking: false, reaction: "none" }
+    };
+    const peep = document.querySelector('#peep');
+    const text = document.querySelector('#config');
+    const status = document.querySelector('#status');
+    let reactionTimer;
+    const avatarOptions = Object.freeze({
+      heads: ["afro", "bald1", "bangs1", "bangs2", "bun1", "long-bangs", "long-curly", "medium1", "mohawk1", "short1"],
+      faces: ["awe", "calm", "cheeky", "gasp", "laughing", "serious", "smile", "talking"],
+      bodies: ["blazer", "coffee", "explaining", "gaming", "hoodie", "jacket", "laptop", "pointing-up", "sporty-tee", "tee1"],
+      colorFormat: "#RRGGBB",
+      colorFields: ["hair", "skin", "clothes", "accessory"]
+    });
+
+    function render() {
+      const { identity, state } = avatar;
+      // La API compatible de CSS Peeps activa las máscaras y capas correctas.
+      peep.dataset.cssPeeps = [identity.head, state.speaking ? 'talking' : identity.face, identity.body].filter(Boolean).join(' ');
+      peep.style.removeProperty('--peep-head');
+      peep.style.removeProperty('--peep-face');
+      peep.style.removeProperty('--peep-body');
+      peep.style.setProperty('--peep-hair-color', identity.colors.hair);
+      peep.style.setProperty('--peep-skin-color', identity.colors.skin);
+      peep.style.setProperty('--peep-clothes-color', identity.colors.clothes);
+      peep.style.setProperty('--peep-accessory-color', identity.colors.accessory);
+      peep.style.removeProperty('--peep-clothes-custom-paint');
+      peep.className = `css-peeps peep ${state.speaking ? 'speaking' : 'idle'} ${state.reaction !== 'none' ? 'reacting' : ''}`;
+      status.textContent = `Estado: ${state.speaking ? 'speaking' : state.reaction !== 'none' ? state.reaction : 'idle'}`;
+      text.value = JSON.stringify(avatar, null, 2);
+    }
+    function setState(patch) { Object.assign(avatar.state, patch); render(); }
+
+    function requireOption(value, options, field) {
+      if (typeof value !== 'string' || !options.includes(value)) {
+        throw new TypeError(`${field} must be one of: ${options.join(', ')}`);
+      }
+      return value;
+    }
+    function requireColor(value, field) {
+      if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) {
+        throw new TypeError(`${field} must use the #RRGGBB color format`);
+      }
+      return value.toLowerCase();
+    }
+    function validateDesign(design) {
+      if (!design || typeof design !== 'object' || Array.isArray(design)) {
+        throw new TypeError('design must be an object');
+      }
+      const colors = design.colors;
+      if (!colors || typeof colors !== 'object' || Array.isArray(colors)) {
+        throw new TypeError('colors must be an object');
+      }
+      return {
+        head: requireOption(design.head, avatarOptions.heads, 'head'),
+        face: requireOption(design.face, avatarOptions.faces, 'face'),
+        body: requireOption(design.body, avatarOptions.bodies, 'body'),
+        colors: Object.fromEntries(avatarOptions.colorFields.map((field) => [field, requireColor(colors[field], `colors.${field}`)]))
+      };
+    }
+    function getOptions() {
+      return structuredClone({ options: avatarOptions, current: avatar.identity });
+    }
+    function applyDesign(design) {
+      avatar.identity = validateDesign(design);
+      render();
+      return structuredClone(avatar.identity);
+    }
+    window.novaAvatar = {
+      setState,
+      getOptions,
+      applyDesign,
+      get state() { return structuredClone(avatar.state); }
+    };
+    document.querySelector('#apply').onclick = () => {
+      try {
+        const next = JSON.parse(text.value);
+        applyDesign(next.identity);
+        Object.assign(avatar.state, next.state || {});
+        render();
+      } catch (error) { status.textContent = `Configuración no válida: ${error.message}`; }
+    };
+    document.querySelector('#talk').onclick = () => { setState({ speaking: true, reaction: 'none' }); setTimeout(() => setState({ speaking: false }), 5000); };
+    document.querySelector('#react').onclick = () => { clearTimeout(reactionTimer); setState({ speaking: false, reaction: 'happy' }); reactionTimer = setTimeout(() => setState({ reaction: 'none' }), 2200); };
+    document.querySelector('#idle').onclick = () => setState({ speaking: false, reaction: 'none' });
+    render();
+  </script>
+  <script type="module" src="./webmcp/register-avatar-tools.js"></script>
+</body>
+</html>
