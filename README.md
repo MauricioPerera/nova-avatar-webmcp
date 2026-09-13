@@ -9,6 +9,16 @@ Configurador estático de personajes para Nova basado en CSS Peeps. Expone dos h
 
 Los cambios son locales, temporales y reversibles. El sitio no almacena la configuración ni controla OBS.
 
+## Overlay para OBS
+
+Utiliza la GitHub Page con `?mode=overlay` para mostrar únicamente el avatar sobre un fondo transparente:
+
+```text
+https://mauricioperera.github.io/nova-avatar-webmcp/?mode=overlay
+```
+
+Configura esa URL como una **Fuente de navegador** en OBS. No requiere chroma key: el modo overlay no dibuja fondo, bordes, texto ni controles.
+
 ## Desarrollo local
 
 Abra `index.html` desde un servidor HTTP local. WebMCP necesita un contexto HTTP(S), por ejemplo:

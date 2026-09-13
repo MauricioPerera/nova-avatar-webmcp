@@ -9,6 +9,12 @@
   <script type="importmap">
     { "imports": { "@nekuda/webmcp-sdk": "./webmcp/vendor/nekuda-webmcp-sdk-0.5.0/index.js" } }
   </script>
+  <script>
+    // Debe ejecutarse antes de pintar el body para que OBS no vea un flash opaco.
+    if (new URLSearchParams(location.search).get("mode") === "overlay") {
+      document.documentElement.classList.add("overlay-mode");
+    }
+  </script>
   <style>
     :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 15% 15%, #263b79, #0d1020 54%, #070812); color: #eff2ff; }
@@ -28,6 +34,15 @@
     .controls { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
     button { border: 0; border-radius: 10px; padding: 10px 13px; color: #fff; background: #526bd6; cursor: pointer; font-weight: 700; } button:hover { background: #6d85f1; }
     .status { margin-top: 14px; color: #87f0c3; font-size: 13px; }
+    /* URL para OBS: ?mode=overlay. Conserva sólo el avatar y su canal alfa. */
+    .overlay-mode,
+    .overlay-mode body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+    .overlay-mode body { display: block; min-height: 0; }
+    .overlay-mode main { display: block; padding: 0; width: 100%; height: 100%; }
+    .overlay-mode .stage { min-height: 0; width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none; display: grid; place-items: end center; overflow: visible; }
+    .overlay-mode .stage::after,
+    .overlay-mode main > section { display: none; }
+    .overlay-mode .peep { margin-bottom: 0; }
     @media (max-width: 780px) { main { grid-template-columns: 1fr; padding: 16px; } .stage { min-height: 480px; } }
   </style>
 </head>
