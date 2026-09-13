@@ -40,6 +40,13 @@
     .picker input[type="color"] { width: 100%; height: 37px; padding: 3px; cursor: pointer; }
     .picker .toggle { display: flex; align-items: center; gap: 8px; }
     .picker .toggle input { min-width: auto; }
+    .asset-group { grid-column: 1 / -1; }
+    .asset-group > span { display: block; margin-bottom: 6px; color: #bdc7eb; font-size: 12px; }
+    .asset-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+    .asset-option { min-width: 0; min-height: 92px; display: grid; grid-template-rows: 65px auto; place-items: center; padding: 4px; border: 1px solid #5368af; border-radius: 9px; background: #080c1d; color: #bdc7eb; cursor: pointer; font-size: 9px; line-height: 1.15; text-align: center; overflow: hidden; }
+    .asset-option:hover { border-color: #8fa4ff; background: #172047; }
+    .asset-option.selected { border-color: #87f0c3; box-shadow: 0 0 0 1px #87f0c388; background: #183d42; color: #effff8; }
+    .asset-preview { width: 58px; height: 65px; --peep-hair-color: #ff77b7; --peep-skin-color: #f2b28f; --peep-clothes-color: #f4efff; --peep-accessory-color: #ffd75a; }
     .controls { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
     button { border: 0; border-radius: 10px; padding: 10px 13px; color: #fff; background: #526bd6; cursor: pointer; font-weight: 700; } button:hover { background: #6d85f1; }
     .status { margin-top: 14px; color: #87f0c3; font-size: 13px; }
@@ -66,9 +73,9 @@
       <p>El JSON persistente define la identidad. El estado temporal cambia al hablar o reaccionar sin reescribir esa identidad.</p>
       <h2>Armar personaje</h2>
       <div class="picker" id="picker">
-        <label>Cabeza<select id="picker-head"></select></label>
-        <label>Rostro<select id="picker-face"></select></label>
-        <label>Ropa / pose<select id="picker-body"></select></label>
+        <div class="asset-group"><span>Cabeza</span><div class="asset-grid" id="picker-head"></div></div>
+        <div class="asset-group"><span>Rostro</span><div class="asset-grid" id="picker-face"></div></div>
+        <div class="asset-group"><span>Ropa / pose</span><div class="asset-grid" id="picker-body"></div></div>
         <label>Posición<select id="picker-position"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
         <label>Color de pelo<input id="picker-hair" type="color"></label>
         <label>Color de piel<input id="picker-skin" type="color"></label>
@@ -175,20 +182,45 @@
     function getOptions() {
       return structuredClone({ options: avatarOptions, current: avatar.identity, presentation });
     }
-    function populatePicker(id, choices) {
-      const select = document.querySelector(id);
-      select.replaceChildren(...choices.map((choice) => {
-        const option = document.createElement('option');
-        option.value = choice;
-        option.textContent = choice;
+    function pickerValue(field) {
+      return document.querySelector(`#picker-${field} .asset-option.selected`)?.dataset.value;
+    }
+    function populatePicker(field, choices) {
+      const grid = document.querySelector(`#picker-${field}`);
+      grid.replaceChildren(...choices.map((choice) => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'asset-option';
+        option.dataset.value = choice;
+        option.setAttribute('aria-label', `${field}: ${choice}`);
+        const preview = document.createElement('div');
+        preview.className = 'css-peeps asset-preview';
+        const caption = document.createElement('span');
+        caption.textContent = choice;
+        option.append(preview, caption);
+        option.onclick = () => {
+          grid.querySelectorAll('.asset-option').forEach((item) => item.classList.remove('selected'));
+          option.classList.add('selected');
+          applyPicker();
+        };
         return option;
       }));
     }
     function syncPicker() {
       if (!picker) return;
-      document.querySelector('#picker-head').value = avatar.identity.head;
-      document.querySelector('#picker-face').value = avatar.identity.face;
-      document.querySelector('#picker-body').value = avatar.identity.body;
+      for (const field of ['head', 'face', 'body']) {
+        const selected = avatar.identity[field];
+        document.querySelectorAll(`#picker-${field} .asset-option`).forEach((option) => {
+          option.classList.toggle('selected', option.dataset.value === selected);
+          const preview = option.querySelector('.asset-preview');
+          preview.dataset.cssPeeps = [
+            field === 'head' ? option.dataset.value : avatar.identity.head,
+            field === 'face' ? option.dataset.value : avatar.identity.face,
+            field === 'body' ? option.dataset.value : avatar.identity.body
+          ].join(' ');
+          for (const color of avatarOptions.colorFields) preview.style.setProperty(`--peep-${color}-color`, avatar.identity.colors[color]);
+        });
+      }
       document.querySelector('#picker-position').value = presentation.position;
       for (const field of avatarOptions.colorFields) document.querySelector(`#picker-${field}`).value = avatar.identity.colors[field];
       document.querySelector('#picker-flip').checked = presentation.flip;
@@ -196,9 +228,9 @@
     function applyPicker() {
       try {
         applyDesign({
-          head: document.querySelector('#picker-head').value,
-          face: document.querySelector('#picker-face').value,
-          body: document.querySelector('#picker-body').value,
+          head: pickerValue('head'),
+          face: pickerValue('face'),
+          body: pickerValue('body'),
           colors: Object.fromEntries(avatarOptions.colorFields.map((field) => [field, document.querySelector(`#picker-${field}`).value]))
         });
         applyPresentation({ position: document.querySelector('#picker-position').value, flip: document.querySelector('#picker-flip').checked });
@@ -263,9 +295,9 @@
       get presentation() { return structuredClone(presentation); },
       get state() { return structuredClone(avatar.state); }
     };
-    populatePicker('#picker-head', avatarOptions.heads);
-    populatePicker('#picker-face', avatarOptions.faces);
-    populatePicker('#picker-body', avatarOptions.bodies);
+    populatePicker('head', avatarOptions.heads);
+    populatePicker('face', avatarOptions.faces);
+    populatePicker('body', avatarOptions.bodies);
     picker.addEventListener('change', applyPicker);
     document.querySelector('#apply').onclick = () => {
       try {
