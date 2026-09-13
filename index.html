@@ -60,10 +60,13 @@
       <textarea id="config" spellcheck="false"></textarea>
       <div class="controls">
         <button id="apply">Aplicar JSON</button>
+        <button id="export-character">Exportar personaje</button>
+        <button id="import-character">Cargar personaje</button>
         <button id="talk">Hablar 5 s</button>
         <button id="react">Reaccionar</button>
         <button id="idle">Reposo</button>
       </div>
+      <input id="character-file" type="file" accept="application/json,.json" hidden>
       <div class="status" id="status">Estado: idle</div>
     </section>
   </main>
@@ -80,7 +83,9 @@
     const avatarTransform = document.querySelector('#avatar-transform');
     const text = document.querySelector('#config');
     const status = document.querySelector('#status');
+    const characterFile = document.querySelector('#character-file');
     let reactionTimer;
+    const CHARACTER_FORMAT = 'nova-avatar-character/v1';
     const params = new URLSearchParams(location.search);
     const requestedPosition = params.get('position');
     const requestedFlip = params.get('flip');
@@ -110,7 +115,7 @@
       peep.style.removeProperty('--peep-clothes-custom-paint');
       peep.className = `css-peeps peep ${state.speaking ? 'speaking' : 'idle'} ${state.reaction !== 'none' ? 'reacting' : ''}`;
       status.textContent = `Estado: ${state.speaking ? 'speaking' : state.reaction !== 'none' ? state.reaction : 'idle'}`;
-      text.value = JSON.stringify(avatar, null, 2);
+      text.value = JSON.stringify({ identity: avatar.identity, state: avatar.state, presentation }, null, 2);
     }
     function renderPresentation() {
       stage.dataset.position = presentation.position;
@@ -168,6 +173,36 @@
       renderPresentation();
       return structuredClone(presentation);
     }
+    function characterDocument() {
+      return {
+        format: CHARACTER_FORMAT,
+        identity: structuredClone(avatar.identity),
+        presentation: structuredClone(presentation)
+      };
+    }
+    function exportCharacter() {
+      const blob = new Blob([JSON.stringify(characterDocument(), null, 2) + '\n'], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'nova-avatar-character.json';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      status.textContent = 'Personaje exportado como JSON.';
+    }
+    async function importCharacter(file) {
+      if (!file) return;
+      if (file.size > 100_000) throw new TypeError('El archivo supera el límite de 100 KB.');
+      const imported = JSON.parse(await file.text());
+      if (imported.format !== CHARACTER_FORMAT) {
+        throw new TypeError('El archivo no es un personaje Nova compatible.');
+      }
+      applyDesign(imported.identity);
+      if (imported.presentation !== undefined) applyPresentation(imported.presentation);
+      status.textContent = 'Personaje cargado correctamente.';
+    }
     window.novaAvatar = {
       setState,
       getOptions,
@@ -180,9 +215,17 @@
       try {
         const next = JSON.parse(text.value);
         applyDesign(next.identity);
+        if (next.presentation !== undefined) applyPresentation(next.presentation);
         Object.assign(avatar.state, next.state || {});
         render();
       } catch (error) { status.textContent = `Configuración no válida: ${error.message}`; }
+    };
+    document.querySelector('#export-character').onclick = exportCharacter;
+    document.querySelector('#import-character').onclick = () => characterFile.click();
+    characterFile.onchange = async () => {
+      try { await importCharacter(characterFile.files[0]); }
+      catch (error) { status.textContent = `No se pudo cargar: ${error.message}`; }
+      finally { characterFile.value = ''; }
     };
     document.querySelector('#talk').onclick = () => { setState({ speaking: true, reaction: 'none' }); setTimeout(() => setState({ speaking: false }), 5000); };
     document.querySelector('#react').onclick = () => { clearTimeout(reactionTimer); setState({ speaking: false, reaction: 'happy' }); reactionTimer = setTimeout(() => setState({ reaction: 'none' }), 2200); };

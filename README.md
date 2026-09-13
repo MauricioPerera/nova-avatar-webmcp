@@ -28,6 +28,10 @@ Para ubicarlo y hacerlo mirar hacia la composición usa los parámetros `positio
 
 También puede ajustarse temporalmente desde un agente mediante `set_avatar_presentation`.
 
+## Importar y exportar personajes
+
+El configurador puede descargar un personaje con **Exportar personaje** y cargarlo con **Cargar personaje**. El JSON contiene únicamente la identidad visual y su presentación (posición y espejo); no incluye estado de animación, credenciales ni datos personales.
+
 ## Desarrollo local
 
 Abra `index.html` desde un servidor HTTP local. WebMCP necesita un contexto HTTP(S), por ejemplo:
