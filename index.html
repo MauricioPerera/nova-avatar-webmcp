@@ -41,7 +41,11 @@
     .picker .toggle { display: flex; align-items: center; gap: 8px; }
     .picker .toggle input { min-width: auto; }
     .asset-group { grid-column: 1 / -1; }
+    .asset-group[hidden] { display: none; }
     .asset-group > span { display: block; margin-bottom: 6px; color: #bdc7eb; font-size: 12px; }
+    .part-tabs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+    .part-tab { padding: 7px 9px; font-size: 11px; background: #222c59; color: #cbd5ff; }
+    .part-tab.active { background: #526bd6; color: #fff; }
     .asset-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
     .asset-option { min-width: 0; min-height: 92px; display: grid; grid-template-rows: 65px auto; place-items: center; padding: 4px; border: 1px solid #5368af; border-radius: 9px; background: #080c1d; color: #bdc7eb; cursor: pointer; font-size: 9px; line-height: 1.15; text-align: center; overflow: hidden; }
     .asset-option:hover { border-color: #8fa4ff; background: #172047; }
@@ -73,15 +77,33 @@
       <p>El JSON persistente define la identidad. El estado temporal cambia al hablar o reaccionar sin reescribir esa identidad.</p>
       <h2>Armar personaje</h2>
       <div class="picker" id="picker">
-        <div class="asset-group"><span>Cabeza</span><div class="asset-grid" id="picker-head"></div></div>
-        <div class="asset-group"><span>Rostro</span><div class="asset-grid" id="picker-face"></div></div>
-        <div class="asset-group"><span>Ropa / pose</span><div class="asset-grid" id="picker-body"></div></div>
-        <label>Posición<select id="picker-position"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
-        <label>Color de pelo<input id="picker-hair" type="color"></label>
-        <label>Color de piel<input id="picker-skin" type="color"></label>
-        <label>Color de ropa<input id="picker-clothes" type="color"></label>
-        <label>Color de accesorio<input id="picker-accessory" type="color"></label>
-        <label class="toggle"><input id="picker-flip" type="checkbox"> Espejar avatar</label>
+        <div class="part-tabs" role="tablist">
+          <button type="button" class="part-tab active" data-part="head">Cabeza</button>
+          <button type="button" class="part-tab" data-part="face">Rostro</button>
+          <button type="button" class="part-tab" data-part="accessory">Accesorios</button>
+          <button type="button" class="part-tab" data-part="facialHair">Vello facial</button>
+          <button type="button" class="part-tab" data-part="body">Cuerpo</button>
+          <button type="button" class="part-tab" data-part="colors">Colores</button>
+          <button type="button" class="part-tab" data-part="transform">Transformar</button>
+        </div>
+        <div class="asset-group" data-part-panel="head"><span>Cabeza</span><div class="asset-grid" id="picker-head"></div></div>
+        <div class="asset-group" data-part-panel="face" hidden><span>Rostro</span><div class="asset-grid" id="picker-face"></div></div>
+        <div class="asset-group" data-part-panel="accessory" hidden><span>Accesorios</span><div class="asset-grid" id="picker-accessory"></div></div>
+        <div class="asset-group" data-part-panel="facialHair" hidden><span>Vello facial</span><div class="asset-grid" id="picker-facialHair"></div></div>
+        <div class="asset-group" data-part-panel="body" hidden><span>Ropa / pose</span><div class="asset-grid" id="picker-body"></div></div>
+        <div class="asset-group" data-part-panel="colors" hidden><span>Colores</span><div class="picker">
+          <label>Color de pelo<input id="picker-hair" type="color"></label>
+          <label>Color de piel<input id="picker-skin" type="color"></label>
+          <label>Color de ropa<input id="picker-clothes" type="color"></label>
+          <label>Color de accesorio<input id="picker-accessory" type="color"></label>
+          <label>Color de vello facial<input id="picker-facialHair" type="color"></label>
+          <label>Color de objeto<input id="picker-object" type="color"></label>
+          <label>Color de sombrero<input id="picker-hat" type="color"></label>
+        </div></div>
+        <div class="asset-group" data-part-panel="transform" hidden><span>Transformar</span><div class="picker">
+          <label>Posición<select id="picker-position"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+          <label class="toggle"><input id="picker-flip" type="checkbox"> Espejar avatar</label>
+        </div></div>
       </div>
       <textarea id="config" spellcheck="false"></textarea>
       <div class="controls">
@@ -100,7 +122,8 @@
     const avatar = {
       identity: {
         head: "bangs1", face: "talking", body: "explaining",
-        colors: { hair: "#ff77b7", skin: "#f2b28f", clothes: "#f4efff", accessory: "#ffd75a" }
+        accessory: null, facialHair: null,
+        colors: { hair: "#ff77b7", skin: "#f2b28f", clothes: "#f4efff", accessory: "#ffd75a", facialHair: "#5b3b2e", object: "#61dafb", hat: "#a57cff" }
       },
       state: { expression: "idle", speaking: false, reaction: "none" }
     };
@@ -125,20 +148,20 @@
       faces: ["awe", "calm", "cheeky", "gasp", "laughing", "serious", "smile", "talking"],
       bodies: ["blazer", "coffee", "explaining", "gaming", "hoodie", "jacket", "laptop", "pointing-up", "sporty-tee", "tee1"],
       colorFormat: "#RRGGBB",
-      colorFields: ["hair", "skin", "clothes", "accessory"]
+      accessories: ["none", "eyepatch", "glasses1", "glasses2", "glasses3", "glasses4", "glasses5", "sunglasses1", "sunglasses2"],
+      facialHairs: ["none", "chinhair", "beard1", "beard2", "beard3", "beard4", "goatee1", "goatee2", "mustache1", "mustache2", "mustache3", "mustache4", "mustache5", "mustache6", "mustache7", "mustache8", "mustache9"],
+      colorFields: ["hair", "skin", "clothes", "accessory", "facialHair", "object", "hat"]
     });
+    const colorCssNames = { facialHair: 'facial-hair' };
 
     function render() {
       const { identity, state } = avatar;
       // La API compatible de CSS Peeps activa las máscaras y capas correctas.
-      peep.dataset.cssPeeps = [identity.head, state.speaking ? 'talking' : identity.face, identity.body].filter(Boolean).join(' ');
+      peep.dataset.cssPeeps = [identity.head, state.speaking ? 'talking' : identity.face, identity.accessory, identity.facialHair, identity.body].filter(Boolean).join(' ');
       peep.style.removeProperty('--peep-head');
       peep.style.removeProperty('--peep-face');
       peep.style.removeProperty('--peep-body');
-      peep.style.setProperty('--peep-hair-color', identity.colors.hair);
-      peep.style.setProperty('--peep-skin-color', identity.colors.skin);
-      peep.style.setProperty('--peep-clothes-color', identity.colors.clothes);
-      peep.style.setProperty('--peep-accessory-color', identity.colors.accessory);
+      for (const color of avatarOptions.colorFields) peep.style.setProperty(`--peep-${colorCssNames[color] || color}-color`, identity.colors[color]);
       peep.style.removeProperty('--peep-clothes-custom-paint');
       peep.className = `css-peeps peep ${state.speaking ? 'speaking' : 'idle'} ${state.reaction !== 'none' ? 'reacting' : ''}`;
       status.textContent = `Estado: ${state.speaking ? 'speaking' : state.reaction !== 'none' ? state.reaction : 'idle'}`;
@@ -164,11 +187,16 @@
       }
       return value.toLowerCase();
     }
+    function optionalOption(value, options, field) {
+      const selected = value ?? 'none';
+      requireOption(selected, options, field);
+      return selected === 'none' ? null : selected;
+    }
     function validateDesign(design) {
       if (!design || typeof design !== 'object' || Array.isArray(design)) {
         throw new TypeError('design must be an object');
       }
-      const colors = design.colors;
+      const colors = { ...avatar.identity.colors, ...design.colors };
       if (!colors || typeof colors !== 'object' || Array.isArray(colors)) {
         throw new TypeError('colors must be an object');
       }
@@ -176,6 +204,8 @@
         head: requireOption(design.head, avatarOptions.heads, 'head'),
         face: requireOption(design.face, avatarOptions.faces, 'face'),
         body: requireOption(design.body, avatarOptions.bodies, 'body'),
+        accessory: optionalOption(design.accessory, avatarOptions.accessories, 'accessory'),
+        facialHair: optionalOption(design.facialHair, avatarOptions.facialHairs, 'facialHair'),
         colors: Object.fromEntries(avatarOptions.colorFields.map((field) => [field, requireColor(colors[field], `colors.${field}`)]))
       };
     }
@@ -208,17 +238,19 @@
     }
     function syncPicker() {
       if (!picker) return;
-      for (const field of ['head', 'face', 'body']) {
+      for (const field of ['head', 'face', 'accessory', 'facialHair', 'body']) {
         const selected = avatar.identity[field];
         document.querySelectorAll(`#picker-${field} .asset-option`).forEach((option) => {
-          option.classList.toggle('selected', option.dataset.value === selected);
+          option.classList.toggle('selected', option.dataset.value === (selected || 'none'));
           const preview = option.querySelector('.asset-preview');
           preview.dataset.cssPeeps = [
             field === 'head' ? option.dataset.value : avatar.identity.head,
             field === 'face' ? option.dataset.value : avatar.identity.face,
+            field === 'accessory' ? option.dataset.value : avatar.identity.accessory,
+            field === 'facialHair' ? option.dataset.value : avatar.identity.facialHair,
             field === 'body' ? option.dataset.value : avatar.identity.body
-          ].join(' ');
-          for (const color of avatarOptions.colorFields) preview.style.setProperty(`--peep-${color}-color`, avatar.identity.colors[color]);
+          ].filter((part) => part && part !== 'none').join(' ');
+          for (const color of avatarOptions.colorFields) preview.style.setProperty(`--peep-${colorCssNames[color] || color}-color`, avatar.identity.colors[color]);
         });
       }
       document.querySelector('#picker-position').value = presentation.position;
@@ -231,6 +263,8 @@
           head: pickerValue('head'),
           face: pickerValue('face'),
           body: pickerValue('body'),
+          accessory: pickerValue('accessory'),
+          facialHair: pickerValue('facialHair'),
           colors: Object.fromEntries(avatarOptions.colorFields.map((field) => [field, document.querySelector(`#picker-${field}`).value]))
         });
         applyPresentation({ position: document.querySelector('#picker-position').value, flip: document.querySelector('#picker-flip').checked });
@@ -297,7 +331,13 @@
     };
     populatePicker('head', avatarOptions.heads);
     populatePicker('face', avatarOptions.faces);
+    populatePicker('accessory', avatarOptions.accessories);
+    populatePicker('facialHair', avatarOptions.facialHairs);
     populatePicker('body', avatarOptions.bodies);
+    picker.querySelectorAll('.part-tab').forEach((tab) => tab.onclick = () => {
+      picker.querySelectorAll('.part-tab').forEach((item) => item.classList.toggle('active', item === tab));
+      picker.querySelectorAll('[data-part-panel]').forEach((panel) => { panel.hidden = panel.dataset.partPanel !== tab.dataset.part; });
+    });
     picker.addEventListener('change', applyPicker);
     document.querySelector('#apply').onclick = () => {
       try {
@@ -321,6 +361,6 @@
     renderPresentation();
     render();
   </script>
-  <script type="module" src="./webmcp/register-avatar-tools.js?v=2"></script>
+  <script type="module" src="./webmcp/register-avatar-tools.js?v=3"></script>
 </body>
 </html>

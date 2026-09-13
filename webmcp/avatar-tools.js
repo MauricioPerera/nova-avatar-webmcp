@@ -28,7 +28,7 @@ export const getAvatarOptions = defineTool({
 export const applyAvatarDesign = defineTool({
   stableKey: "avatar.apply_design",
   name: "apply_avatar_design",
-  description: "Applies a validated avatar combination to the visible preview and editable JSON. Use it after choosing allowed variants; changes are temporary and reversible, and it neither saves the avatar nor controls OBS.",
+  description: "Applies a validated avatar combination, including optional accessories and facial hair, to the visible preview and editable JSON. Use it after choosing allowed variants; changes are temporary and reversible, and it neither saves the avatar nor controls OBS.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -37,6 +37,8 @@ export const applyAvatarDesign = defineTool({
       head: { type: "string", description: "A head variant returned by get_avatar_options." },
       face: { type: "string", description: "A face variant returned by get_avatar_options." },
       body: { type: "string", description: "A body variant returned by get_avatar_options." },
+      accessory: { type: ["string", "null"], description: "An optional accessory variant returned by get_avatar_options, or null." },
+      facialHair: { type: ["string", "null"], description: "An optional facial-hair variant returned by get_avatar_options, or null." },
       colors: {
         type: "object",
         additionalProperties: false,
@@ -45,7 +47,10 @@ export const applyAvatarDesign = defineTool({
           hair: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
           skin: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
           clothes: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-          accessory: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }
+          accessory: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
+          facialHair: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
+          object: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
+          hat: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }
         }
       }
     }

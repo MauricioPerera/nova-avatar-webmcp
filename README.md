@@ -32,7 +32,7 @@ También puede ajustarse temporalmente desde un agente mediante `set_avatar_pres
 
 El configurador puede descargar un personaje con **Exportar personaje** y cargarlo con **Cargar personaje**. El JSON contiene únicamente la identidad visual y su presentación (posición y espejo); no incluye estado de animación, credenciales ni datos personales.
 
-El panel **Armar personaje** ofrece selectores visuales para las variantes permitidas y colores. Los cambios se aplican inmediatamente y permanecen sincronizados con el JSON editable y con las herramientas WebMCP.
+El panel **Armar personaje** sigue las secciones del constructor original de [CSS Peeps](https://css-peeps.com/): Cabeza, Rostro, Accesorios, Vello facial, Cuerpo, Colores y Transformación. Los cambios se aplican inmediatamente y permanecen sincronizados con el JSON editable y con las herramientas WebMCP.
 
 ## Desarrollo local
 
