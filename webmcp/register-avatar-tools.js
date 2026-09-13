@@ -1,7 +1,7 @@
 import { registerTools } from "@nekuda/webmcp-sdk";
-import { applyAvatarDesign, getAvatarOptions } from "./avatar-tools.js";
+import { applyAvatarDesign, getAvatarOptions, setAvatarPresentation } from "./avatar-tools.js";
 
-const registration = registerTools([getAvatarOptions, applyAvatarDesign], {
+const registration = registerTools([getAvatarOptions, applyAvatarDesign, setAvatarPresentation], {
   telemetry: false
 });
 

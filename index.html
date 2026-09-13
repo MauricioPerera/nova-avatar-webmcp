@@ -21,6 +21,8 @@
     main { display: grid; grid-template-columns: minmax(300px, 440px) minmax(260px, 380px); gap: 28px; align-items: center; padding: 30px; }
     .stage { min-height: 560px; display: grid; place-items: end center; border: 1px solid #6e7bcf55; border-radius: 28px; background: linear-gradient(160deg, #111936cc, #24154dcc); overflow: hidden; position: relative; box-shadow: 0 28px 60px #0008; }
     .stage::after { content: "CSS Peeps · prototipo local"; position: absolute; bottom: 16px; color: #c8d5ff99; font-size: 12px; letter-spacing: .08em; }
+    .avatar-transform { transform-origin: bottom center; }
+    .avatar-transform.flipped { transform: scaleX(-1); }
     .peep { width: 330px; height: 446px; margin-bottom: 34px; --peep-head: bangs1; --peep-face: talking; --peep-body: explaining; --peep-hair-color: #ff77b7; --peep-skin-color: #f2b28f; --peep-clothes-color: #f4efff; --peep-accessory-color: #ffd75a; --peep-object-color: #61dafb; filter: drop-shadow(0 16px 18px #0008); transform-origin: bottom center; }
     .peep.idle { animation: breathe 3.2s ease-in-out infinite alternate; }
     .peep.speaking { animation: talking .17s ease-in-out infinite alternate; }
@@ -43,12 +45,15 @@
     .overlay-mode .stage::after,
     .overlay-mode main > section { display: none; }
     .overlay-mode .peep { margin-bottom: 0; }
+    .overlay-mode .stage[data-position="left"] { place-items: end start; }
+    .overlay-mode .stage[data-position="center"] { place-items: end center; }
+    .overlay-mode .stage[data-position="right"] { place-items: end end; }
     @media (max-width: 780px) { main { grid-template-columns: 1fr; padding: 16px; } .stage { min-height: 480px; } }
   </style>
 </head>
 <body>
   <main>
-    <div class="stage"><div id="peep" class="css-peeps peep idle" aria-label="Avatar de Nova"></div></div>
+    <div class="stage" id="stage"><div class="avatar-transform" id="avatar-transform"><div id="peep" class="css-peeps peep idle" aria-label="Avatar de Nova"></div></div></div>
     <section>
       <h1>Nova avatar · estado controlado</h1>
       <p>El JSON persistente define la identidad. El estado temporal cambia al hablar o reaccionar sin reescribir esa identidad.</p>
@@ -71,9 +76,18 @@
       state: { expression: "idle", speaking: false, reaction: "none" }
     };
     const peep = document.querySelector('#peep');
+    const stage = document.querySelector('#stage');
+    const avatarTransform = document.querySelector('#avatar-transform');
     const text = document.querySelector('#config');
     const status = document.querySelector('#status');
     let reactionTimer;
+    const params = new URLSearchParams(location.search);
+    const requestedPosition = params.get('position');
+    const requestedFlip = params.get('flip');
+    const presentation = {
+      position: ["left", "center", "right"].includes(requestedPosition) ? requestedPosition : "center",
+      flip: requestedFlip === "true" || requestedFlip === "1"
+    };
     const avatarOptions = Object.freeze({
       heads: ["afro", "bald1", "bangs1", "bangs2", "bun1", "long-bangs", "long-curly", "medium1", "mohawk1", "short1"],
       faces: ["awe", "calm", "cheeky", "gasp", "laughing", "serious", "smile", "talking"],
@@ -97,6 +111,10 @@
       peep.className = `css-peeps peep ${state.speaking ? 'speaking' : 'idle'} ${state.reaction !== 'none' ? 'reacting' : ''}`;
       status.textContent = `Estado: ${state.speaking ? 'speaking' : state.reaction !== 'none' ? state.reaction : 'idle'}`;
       text.value = JSON.stringify(avatar, null, 2);
+    }
+    function renderPresentation() {
+      stage.dataset.position = presentation.position;
+      avatarTransform.classList.toggle('flipped', presentation.flip);
     }
     function setState(patch) { Object.assign(avatar.state, patch); render(); }
 
@@ -128,17 +146,34 @@
       };
     }
     function getOptions() {
-      return structuredClone({ options: avatarOptions, current: avatar.identity });
+      return structuredClone({ options: avatarOptions, current: avatar.identity, presentation });
     }
     function applyDesign(design) {
       avatar.identity = validateDesign(design);
       render();
       return structuredClone(avatar.identity);
     }
+    function applyPresentation(next) {
+      if (!next || typeof next !== 'object' || Array.isArray(next)) {
+        throw new TypeError('presentation must be an object');
+      }
+      if (!["left", "center", "right"].includes(next.position)) {
+        throw new TypeError('position must be left, center, or right');
+      }
+      if (typeof next.flip !== 'boolean') {
+        throw new TypeError('flip must be a boolean');
+      }
+      presentation.position = next.position;
+      presentation.flip = next.flip;
+      renderPresentation();
+      return structuredClone(presentation);
+    }
     window.novaAvatar = {
       setState,
       getOptions,
       applyDesign,
+      applyPresentation,
+      get presentation() { return structuredClone(presentation); },
       get state() { return structuredClone(avatar.state); }
     };
     document.querySelector('#apply').onclick = () => {
@@ -152,6 +187,7 @@
     document.querySelector('#talk').onclick = () => { setState({ speaking: true, reaction: 'none' }); setTimeout(() => setState({ speaking: false }), 5000); };
     document.querySelector('#react').onclick = () => { clearTimeout(reactionTimer); setState({ speaking: false, reaction: 'happy' }); reactionTimer = setTimeout(() => setState({ reaction: 'none' }), 2200); };
     document.querySelector('#idle').onclick = () => setState({ speaking: false, reaction: 'none' });
+    renderPresentation();
     render();
   </script>
   <script type="module" src="./webmcp/register-avatar-tools.js"></script>

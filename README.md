@@ -19,6 +19,15 @@ https://mauricioperera.github.io/nova-avatar-webmcp/?mode=overlay
 
 Configura esa URL como una **Fuente de navegador** en OBS. No requiere chroma key: el modo overlay no dibuja fondo, bordes, texto ni controles.
 
+Para ubicarlo y hacerlo mirar hacia la composición usa los parámetros `position` y `flip`:
+
+```text
+?mode=overlay&position=left&flip=true
+?mode=overlay&position=right&flip=false
+```
+
+También puede ajustarse temporalmente desde un agente mediante `set_avatar_presentation`.
+
 ## Desarrollo local
 
 Abra `index.html` desde un servidor HTTP local. WebMCP necesita un contexto HTTP(S), por ejemplo:

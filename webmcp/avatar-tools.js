@@ -56,3 +56,27 @@ export const applyAvatarDesign = defineTool({
     return { applied: avatarApi().applyDesign(input) };
   }
 });
+
+export const setAvatarPresentation = defineTool({
+  stableKey: "avatar.set_presentation",
+  name: "set_avatar_presentation",
+  description: "Places the visible avatar on the left, center, or right and optionally mirrors it horizontally. Use it to compose an OBS overlay; the change is temporary and reversible.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["position", "flip"],
+    properties: {
+      position: { type: "string", enum: ["left", "center", "right"] },
+      flip: { type: "boolean", description: "Whether to mirror the avatar horizontally." }
+    }
+  },
+  source: "merchant_authored",
+  intent: "act",
+  async execute(input) {
+    const api = avatarApi();
+    if (typeof api.applyPresentation !== "function") {
+      throw new Error("The Nova avatar presentation controls are not ready.");
+    }
+    return { applied: api.applyPresentation(input) };
+  }
+});
