@@ -32,7 +32,14 @@
     @keyframes reaction { 50% { transform: translateY(-22px) rotate(-7deg) scale(1.08); } }
     section { background: #10152be8; border: 1px solid #8397e044; border-radius: 22px; padding: 22px; box-shadow: 0 16px 45px #0005; }
     h1 { font-size: 22px; margin: 0 0 8px; } p { color: #bdc7eb; line-height: 1.5; }
+    h2 { font-size: 15px; margin: 20px 0 10px; color: #e9edff; }
     textarea { width: 100%; min-height: 240px; padding: 12px; box-sizing: border-box; border-radius: 12px; background: #080c1d; border: 1px solid #5368af; color: #dbe5ff; font: 12px ui-monospace, monospace; }
+    .picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .picker label { display: grid; gap: 5px; color: #bdc7eb; font-size: 12px; }
+    .picker select, .picker input { min-width: 0; box-sizing: border-box; border: 1px solid #5368af; border-radius: 8px; background: #080c1d; color: #edf1ff; padding: 8px; }
+    .picker input[type="color"] { width: 100%; height: 37px; padding: 3px; cursor: pointer; }
+    .picker .toggle { display: flex; align-items: center; gap: 8px; }
+    .picker .toggle input { min-width: auto; }
     .controls { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
     button { border: 0; border-radius: 10px; padding: 10px 13px; color: #fff; background: #526bd6; cursor: pointer; font-weight: 700; } button:hover { background: #6d85f1; }
     .status { margin-top: 14px; color: #87f0c3; font-size: 13px; }
@@ -57,6 +64,18 @@
     <section>
       <h1>Nova avatar · estado controlado</h1>
       <p>El JSON persistente define la identidad. El estado temporal cambia al hablar o reaccionar sin reescribir esa identidad.</p>
+      <h2>Armar personaje</h2>
+      <div class="picker" id="picker">
+        <label>Cabeza<select id="picker-head"></select></label>
+        <label>Rostro<select id="picker-face"></select></label>
+        <label>Ropa / pose<select id="picker-body"></select></label>
+        <label>Posición<select id="picker-position"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+        <label>Color de pelo<input id="picker-hair" type="color"></label>
+        <label>Color de piel<input id="picker-skin" type="color"></label>
+        <label>Color de ropa<input id="picker-clothes" type="color"></label>
+        <label>Color de accesorio<input id="picker-accessory" type="color"></label>
+        <label class="toggle"><input id="picker-flip" type="checkbox"> Espejar avatar</label>
+      </div>
       <textarea id="config" spellcheck="false"></textarea>
       <div class="controls">
         <button id="apply">Aplicar JSON</button>
@@ -84,6 +103,7 @@
     const text = document.querySelector('#config');
     const status = document.querySelector('#status');
     const characterFile = document.querySelector('#character-file');
+    const picker = document.querySelector('#picker');
     let reactionTimer;
     const CHARACTER_FORMAT = 'nova-avatar-character/v1';
     const params = new URLSearchParams(location.search);
@@ -116,10 +136,12 @@
       peep.className = `css-peeps peep ${state.speaking ? 'speaking' : 'idle'} ${state.reaction !== 'none' ? 'reacting' : ''}`;
       status.textContent = `Estado: ${state.speaking ? 'speaking' : state.reaction !== 'none' ? state.reaction : 'idle'}`;
       text.value = JSON.stringify({ identity: avatar.identity, state: avatar.state, presentation }, null, 2);
+      syncPicker();
     }
     function renderPresentation() {
       stage.dataset.position = presentation.position;
       avatarTransform.classList.toggle('flipped', presentation.flip);
+      syncPicker();
     }
     function setState(patch) { Object.assign(avatar.state, patch); render(); }
 
@@ -152,6 +174,36 @@
     }
     function getOptions() {
       return structuredClone({ options: avatarOptions, current: avatar.identity, presentation });
+    }
+    function populatePicker(id, choices) {
+      const select = document.querySelector(id);
+      select.replaceChildren(...choices.map((choice) => {
+        const option = document.createElement('option');
+        option.value = choice;
+        option.textContent = choice;
+        return option;
+      }));
+    }
+    function syncPicker() {
+      if (!picker) return;
+      document.querySelector('#picker-head').value = avatar.identity.head;
+      document.querySelector('#picker-face').value = avatar.identity.face;
+      document.querySelector('#picker-body').value = avatar.identity.body;
+      document.querySelector('#picker-position').value = presentation.position;
+      for (const field of avatarOptions.colorFields) document.querySelector(`#picker-${field}`).value = avatar.identity.colors[field];
+      document.querySelector('#picker-flip').checked = presentation.flip;
+    }
+    function applyPicker() {
+      try {
+        applyDesign({
+          head: document.querySelector('#picker-head').value,
+          face: document.querySelector('#picker-face').value,
+          body: document.querySelector('#picker-body').value,
+          colors: Object.fromEntries(avatarOptions.colorFields.map((field) => [field, document.querySelector(`#picker-${field}`).value]))
+        });
+        applyPresentation({ position: document.querySelector('#picker-position').value, flip: document.querySelector('#picker-flip').checked });
+        status.textContent = 'Selección aplicada.';
+      } catch (error) { status.textContent = `Selección no válida: ${error.message}`; }
     }
     function applyDesign(design) {
       avatar.identity = validateDesign(design);
@@ -211,6 +263,10 @@
       get presentation() { return structuredClone(presentation); },
       get state() { return structuredClone(avatar.state); }
     };
+    populatePicker('#picker-head', avatarOptions.heads);
+    populatePicker('#picker-face', avatarOptions.faces);
+    populatePicker('#picker-body', avatarOptions.bodies);
+    picker.addEventListener('change', applyPicker);
     document.querySelector('#apply').onclick = () => {
       try {
         const next = JSON.parse(text.value);

@@ -32,6 +32,8 @@ También puede ajustarse temporalmente desde un agente mediante `set_avatar_pres
 
 El configurador puede descargar un personaje con **Exportar personaje** y cargarlo con **Cargar personaje**. El JSON contiene únicamente la identidad visual y su presentación (posición y espejo); no incluye estado de animación, credenciales ni datos personales.
 
+El panel **Armar personaje** ofrece selectores visuales para las variantes permitidas y colores. Los cambios se aplican inmediatamente y permanecen sincronizados con el JSON editable y con las herramientas WebMCP.
+
 ## Desarrollo local
 
 Abra `index.html` desde un servidor HTTP local. WebMCP necesita un contexto HTTP(S), por ejemplo:
